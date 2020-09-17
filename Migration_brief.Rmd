@@ -1,0 +1,476 @@
+---
+title: "Migration brief"
+author: "Pardee Center for International Futures"
+date: "February to April 2018"
+output:
+  html_notebook:
+    fig_height: 6.2
+    fig_width: 10
+    toc: yes
+  html_document:
+    toc: yes
+    toc_depth: 3
+  pdf_document:
+    toc: yes
+  word_document:
+    fig_height: 6.2
+    fig_width: 10
+    toc: yes
+    toc_depth: '3'
+---
+```{r setup, include=FALSE}
+library(tidyverse)    #for data management & visualization
+library(scales)       #for ggplot labels
+library(extrafont)    #to import USAID font
+library(rgdal)        #for converting shapefiles to ggplot polygons
+library(cowplot)      #for side-by-side ggplot arrangements
+library(ggalt)            #for easy dumbbell plots
+
+#font_import()
+```
+
+```{r theme_setup, include=FALSE}
+usaid.theme <- theme(
+  plot.title = element_text(family="Gill Sans MT", color="black", face="bold", size=20, hjust=0), 
+  plot.subtitle = element_text(family="Gill Sans MT", color="black", size=15, hjust=0), 
+  axis.title = element_text(family="Gill Sans MT", color="black", face="bold", size=14), 
+  axis.text = element_text(family="Gill Sans MT", size=13), 
+  plot.caption = element_text(family="Gill Sans MT", color="black", size=13), 
+  panel.background =  element_rect(fill = "#F7F7F7", colour = NA), 
+  panel.grid.major = element_line(colour = "grey90", size = 0.5),
+  panel.grid.minor = element_line(colour = "grey93", size = 0.5),
+  panel.border = element_rect(colour = "black", size = 0.5, fill=NA, linetype = 1),
+  legend.title=element_blank(), 
+  legend.text = element_text(family="Gill Sans MT", color="black", size=14, hjust=0),
+  legend.position = 'top',
+  strip.text = element_text(family="Gill Sans MT", color="black", face="bold", size=16),
+  strip.background = element_rect(fill = "white"))
+
+#002F6C       #USAID blue
+#BA0C2F       #USAID red
+```
+
+```{r mapping_theme, include=FALSE}
+usaid.theme.map <- theme(
+  plot.title = element_text(family="Gill Sans MT", color="black", face="bold", size=16, hjust=.5), 
+  plot.subtitle = element_text(family="Gill Sans MT", color="black", size=14, hjust=.5), 
+  axis.title = element_blank(),
+  axis.text = element_blank(),
+  axis.ticks = element_blank(), 
+  axis.line = element_blank(),
+  plot.caption = element_text(family="Gill Sans MT", color="black", size=12), 
+  panel.background =  element_blank(), 
+  legend.title = element_text(family="Gill Sans MT", color="black", size=14, hjust=.5),
+  legend.text = element_text(family="Gill Sans MT", color="black", size=12, hjust=0))
+```
+
+```{r}
+center <- read.csv('.//data/district_centers.csv') %>% 
+  select(2:5)
+```
+
+
+```{r mapping_setup, include=FALSE}
+shape <- rgdal::readOGR("data", "Uganda_New")
+shape.fort <- fortify(shape, region = "DNAME_06")
+
+#join your map dataframe (shape.fort) on the data that you want to map
+#map_df_uganda <- full_join(x=shape.fort, 
+ #                           y=center, 
+  #                          by=c('id' = 'DNAME_06'))
+
+resid_migr <- read_csv('.//data/uganda_residual_migration_v4.0.csv')
+
+map_df_uganda <- full_join(x=shape.fort, 
+                            y=resid_migr, 
+                            by=c('id' = 'District'))
+```
+
+
+```{r fig.height=6.2}
+highlight_dist <- c('Kampala', 'Gulu')
+
+#center$DNAME_06 <- as.character(center$DNAME_06)
+
+map_df_uganda %>% 
+  ggplot(.) + 
+  geom_polygon(mapping=aes(x=long,
+                           y=lat,
+                           group=group,
+                           #fill= is the variable you want to map
+                           fill=`Population change (2015-2014)`),
+            #color= sets the boundary color
+            color='black', 
+            size=.2) + 
+  #geom_point(data=center %>% filter(DNAME_06 %in% highlight_dist),
+   #                         aes(x=cent_x,
+    #                            y=cent_y), color='white') + 
+  #ggrepel::geom_label_repel(data=center %>% filter(DNAME_06 %in% highlight_dist),
+   #                         aes(x=cent_x,
+    #                            y=cent_y,
+     #                           label=DNAME_06), family="Gill Sans MT", size=4.5, force = 35) + 
+  ggtitle('') + 
+  coord_map() + 
+  labs(fill='', 
+       caption='') + 
+  #this is how you can change the color scale easily
+  #scale_fill_manual(breaks = c('Very Low', 'Low', 'Medium', 'High', 'Very High'),
+   #                 values = map_cols,
+    #                na.value = 'gray50') + 
+  usaid.theme.map 
+  #theme(legend.position = 'top')
+
+```
+
+## 2006 shapefile
+
+```{r mapping_setup_2006, include=FALSE}
+shape_2006 <- rgdal::readOGR("data", "Uganda_county2006")
+shape.fort_2006 <- fortify(shape_2006, region = "DNAME_2006")
+```
+
+
+```{r fig.height=6.2}
+highlight_dist <- c('Kampala', 'Gulu')
+
+#center$DNAME_06 <- as.character(center$DNAME_06)
+
+shape.fort_2006 %>% 
+  ggplot(.) + 
+  geom_polygon(mapping=aes(x=long,
+                           y=lat,
+                           group=id),
+                           #fill= is the variable you want to map
+                           #fill=`Population change (2015-2014)`),
+            #color= sets the boundary color
+            color='black', 
+            size=.2) + 
+  ggtitle('') + 
+  coord_map() + 
+  labs(fill='', 
+       caption='') + 
+  #this is how you can change the color scale easily
+  #scale_fill_manual(breaks = c('Very Low', 'Low', 'Medium', 'High', 'Very High'),
+   #                 values = map_cols,
+    #                na.value = 'gray50') + 
+  usaid.theme.map 
+  #theme(legend.position = 'top')
+```
+
+```{r}
+uganda_mig <- read_csv('.//data/uganda_residual_migration_v4.0.csv')
+land_area <- read.csv('.//data/ug_landarea.csv')
+
+
+gdp <- read.csv('.//data/New_AGGDPFinal2.csv') %>% 
+  select(Country, LIM_2014, GDPPC_LIM_2014) %>% 
+  rename('District' = 'Country')
+
+uganda_mig <- uganda_mig %>% 
+  left_join(x=.,
+            y=gdp,
+            by='District') %>% 
+  left_join(x=.,
+            y=land_area,
+            by='District')
+
+#uganda_mig %>% 
+ # write.csv(., './/output_tables/uganda_residual_migration_v4.0.csv')
+```
+
+# Update to working paper
+
+```{r}
+subnat_mig_outcomes <- 
+  read.csv('.//data/subnat_mig_outcomes.csv') %>% 
+  mutate(Scenario = ifelse(Scenario == 'Base', 'Original Current Path', 'Adjusted Current Path')) %>% 
+  separate(Geography, c('country', 'district'), sep = '\\-') %>% 
+  mutate(district = ifelse(is.na(district), 'Uganda', district)) %>% 
+  mutate(dist_scen = paste(district, Scenario, sep = '-'))
+
+
+subnat_mig_outcomes$Scenario <- as.factor(subnat_mig_outcomes$Scenario)
+
+subnat_mig_outcomes$Scenario <- factor(subnat_mig_outcomes$Scenario, levels=c('Original Current Path', 'Adjusted Current Path'))
+```
+
+```{r fig_1, fig.height=6.2}
+uganda_migration_total <- 
+  read.csv('.//data/uganda_migration_total.csv') %>% 
+  gather(var, val, 2:3) %>% 
+  mutate(var = ifelse(var == 'Current.Path', 'Original Current Path', 'Adjusted Current Path'))
+
+uganda_migration_total$var <- as.factor(uganda_migration_total$var)
+
+uganda_migration_total$var <- factor(uganda_migration_total$var, levels=c('Original Current Path', 'Adjusted Current Path'))
+
+mig_cols <- c('Kampala-Current Path' = "#99d8c9", 'Kampala-District Migration' = "#005824",
+              'Wakiso-Current Path' = "#9ebcda", 'Wakiso-District Migration' = "#6e016b",
+              'Original Current Path' = "darkblue", 'Adjusted Current Path' = "darkgreen")
+
+uganda_migration_total %>% 
+  arrange(desc(var)) %>% 
+  ggplot(.,
+         aes(x=Year,
+             y=val*1000)) + 
+  geom_line(aes(group=var,
+                color=var),
+            size=1.2) + 
+  geom_point(aes(shape=var,
+                 color=var), size=3) + 
+  geom_hline(yintercept = 0, linetype = 'dashed') + 
+  annotate("text", label="Net zero migration", x=2016, y=3, size=5, color="black", family="Gill Sans MT") + 
+  ggtitle('Forecast of net migrants for Uganda',
+          subtitle = 'Original Current Path vs. Adjusted Current Path scenario') + 
+  labs(y='Thousand migrants (net)',
+       caption='Source: IFs v7.33 IP4') + 
+  scale_color_manual(values=mig_cols) +
+  scale_y_continuous(breaks = c(-40, -20, 0, 20, 40)) +  
+  usaid.theme
+```
+
+```{r}
+mig_cols_2 <- c('Kampala-Original Current Path' = "lightgreen", 'Kampala-Adjusted Current Path' = "darkgreen",
+              'Wakiso-Original Current Path' = "plum3", 'Wakiso-Adjusted Current Path' = "purple3",
+              'Uganda-Original Current Path' = "#fdbb84", 'Uganda-Adjusted Current Path' = "#990000")
+```
+
+```{r fig_2, fig.height=6.2}
+KP_WK <- c('Kampala', 'Wakiso')
+
+subnat_mig_outcomes %>% 
+  filter(district %in% KP_WK) %>% 
+  ggplot(.,
+         aes(x=Year,
+             y=GDP)) + 
+  geom_line(aes(group=dist_scen,
+                color=dist_scen),
+            size=1.2) + 
+  geom_point(aes(shape=Scenario,
+                 color=dist_scen), size=4, show.legend = FALSE) + 
+  ggtitle('GDP forecast (MER) for Kampala and Wakiso',
+          subtitle = 'Original Current Path vs. Adjusted Current Path scenario') + 
+  guides(color=guide_legend(nrow=2,byrow=TRUE)) + 
+  labs(y='Population (millions)',
+       x='Year',
+       caption='Source: IFs v7.33 IP4') + 
+  scale_color_manual(values=mig_cols_2) + 
+  usaid.theme
+```
+
+```{r fig_3, fig.height=6.2}
+subnat_mig_outcomes %>% 
+  filter(district %in% KP_WK) %>% 
+  ggplot(.,
+         aes(x=Year,
+             y=GDPPCP)) + 
+  geom_line(aes(group=dist_scen,
+                color=dist_scen),
+            size=1.2) + 
+  geom_point(aes(shape=Scenario,
+                 color=dist_scen), size=4, show.legend = FALSE) + 
+  ggtitle('GDP per capita forecast for Kampala and Wakiso',
+          subtitle = 'Current Path vs. District Migration scenario') + 
+  guides(color=guide_legend(nrow=2,byrow=TRUE)) + 
+  labs(y='GDP per capita (Thous 2011 US$)',
+       x='Year',
+       caption='Source: IFs v7.33 IP4') + 
+  scale_color_manual(values=mig_cols_2) + 
+  usaid.theme
+
+```
+
+```{r fig_4, fig.height=6.2}
+subnat_mig_outcomes %>% 
+  filter(district %in% KP_WK) %>% 
+  ggplot(.,
+         aes(x=Year,
+             y=INCOMELT310LN)) + 
+  geom_line(aes(group=dist_scen,
+                color=dist_scen),
+            size=1.2) + 
+  geom_point(aes(shape=Scenario,
+                 color=dist_scen), size=4, show.legend = FALSE) + 
+  ggtitle('Poverty less than $3.10/day forecast for Kampala and Wakiso',
+          subtitle = 'Current Path vs. District Migration scenario') + 
+  guides(color=guide_legend(nrow=2,byrow=TRUE)) + 
+  labs(y='Population < $3.10 per day (millions)',
+       x='Year',
+       caption='Source: IFs v7.33 IP4') + 
+  scale_color_manual(values=mig_cols_2) + 
+  usaid.theme
+```
+
+```{r}
+shape <- rgdal::readOGR("data", "Uganda_New")
+shape.fort <- fortify(shape, region = "DNAME_06")
+```
+
+
+```{r}
+uganda_mig_df <- 
+  read_csv('.//data/uganda_residual_migration_v4.0.csv')
+
+map_df_uganda <- full_join(x=shape.fort, 
+                            y=uganda_mig_df, 
+                            by=c('id' = 'District'))
+```
+
+```{r map_1, fig.height=7}
+map_df_uganda %>% 
+  ggplot(.) + 
+  geom_polygon(mapping=aes(x=long,
+                           y=lat,
+                           group=group,
+                           #fill= is the variable you want to map
+                           fill=migrantspctpop),
+            #color= sets the boundary color
+            color='black', 
+            size=.2) + 
+  #geom_point(data=center %>% filter(DNAME_06 %in% highlight_dist),
+   #                         aes(x=cent_x,
+    #                            y=cent_y), color='white') + 
+  #ggrepel::geom_label_repel(data=center %>% filter(DNAME_06 %in% highlight_dist),
+   #                         aes(x=cent_x,
+    #                            y=cent_y,
+     #                           label=DNAME_06), family="Gill Sans MT", size=4.5, force = 35) + 
+  ggtitle('Net migration rate estimate using residual method', 
+          subtitle = '2015 estimates') + 
+  coord_map() + 
+  labs(fill='Percent\n', 
+       caption='Source: Landscan and GHSL population data from 2014 and 2015') + 
+  #this is how you can change the color scale easily
+  scale_fill_gradient2(low='red4', high='green4', mid='white', midpoint = 0) + 
+  #scale_fill_manual(breaks = c('Very Low', 'Low', 'Medium', 'High', 'Very High'),
+   #                 values = map_cols,
+    #                na.value = 'gray50') + 
+  usaid.theme.map 
+  #theme(legend.position = 'top')
+```
+
+
+```{r}
+subnat_mig_outcomes_2015 <- 
+  subnat_mig_outcomes %>% 
+  filter(Year == 2015,
+         district != 'Uganda',
+         Scenario != 'Current Path')
+
+subnat_mig_outcomes_2040 <- 
+  subnat_mig_outcomes %>% 
+  filter(Year == 2040,
+         district != 'Uganda',
+         Scenario != 'Current Path')
+
+map_df_forecast_2015 <- full_join(x=shape.fort, 
+                            y=subnat_mig_outcomes_2015, 
+                            by=c('id' = 'district'))
+
+map_df_forecast_2040 <- full_join(x=shape.fort, 
+                            y=subnat_mig_outcomes_2040, 
+                            by=c('id' = 'district'))
+```
+
+
+```{r map_2, fig.height=7}
+map_2 <- map_df_forecast_2015 %>% 
+  ggplot(.) + 
+  geom_polygon(mapping=aes(x=long,
+                           y=lat,
+                           group=group,
+                           #fill= is the variable you want to map
+                           fill=MIGRATE), 
+               #show.legend = FALSE, 
+            #color= sets the boundary color
+            color='black', 
+            size=.2) + 
+  ggtitle('2015') + 
+  coord_map() + 
+  labs(fill='', 
+       caption='') + 
+  #this is how you can change the color scale easily
+  scale_fill_gradient2(low='red4', high='green4', mid='white', midpoint = 0,
+                       limits=c(-5.65, 8.1)) + 
+  usaid.theme.map + 
+  theme(plot.title = element_text(hjust = 0))
+  #theme(legend.position = 'top')
+```
+
+```{r map_3, fig.height=7}
+map_3 <- map_df_forecast_2040 %>% 
+  ggplot(.) + 
+  geom_polygon(mapping=aes(x=long,
+                           y=lat,
+                           group=group,
+                           #fill= is the variable you want to map
+                           fill=MIGRATE),
+            #color= sets the boundary color
+            color='black', 
+            size=.2) + 
+  ggtitle('2040') + 
+  coord_map() + 
+  labs(fill='Percent\n', 
+       caption='Source: IFs v7.33 IP4') + 
+  #this is how you can change the color scale easily
+  scale_fill_gradient2(low='red4', high='green4', mid='white', midpoint = 0,
+                       limits=c(-5.65, 8.1)) + 
+  #scale_fill_manual(low=) + 
+  usaid.theme.map  + 
+  theme(plot.title = element_text(hjust = 0))
+  #theme(legend.position = 'top')
+```
+
+```{r fig.height=6.2}
+map_grid <- plot_grid(map_2, map_3, align = c('h', 'v'))
+
+map_grid_title <- ggdraw() + draw_label('Net migration rate forecasts for Ugandan districts', 
+                                        fontfamily="Gill Sans MT",
+                                        fontface='bold',
+                                        colour="black",
+                                        size=20)
+
+plot_grid(map_grid_title, map_grid, ncol=1, rel_heights=c(0.1, .9))
+```
+
+# Extension of results - June 2018 
+
+```{r regions, include=TRUE}
+regions <- read_csv('.//data/regions.csv')
+```
+
+```{r pop, include=TRUE}
+pop <- readxl::read_xlsx('.//data/UgandaDistrictPop.xlsx', sheet = 'Sheet1') %>% 
+  gather(Year, val, 4:29) %>% 
+  mutate(Year = as.numeric(Year)) %>% 
+  separate(District, into = c('Country', 'District'), sep = "-")
+
+pop_2040 <- pop %>% 
+  filter(Year == 2040) %>% 
+  spread(Scenario, val) %>% 
+  rename('Current Path' = 'Base',
+         'District Migration' = 'UGAMigRe5') %>% 
+  mutate(diff = `District Migration` - `Current Path`) %>% 
+  arrange(-diff) %>% 
+  left_join(x=.,
+            y=regions,
+            by='District')
+```
+
+```{r fig.height=6.2}
+pop_2040 %>% 
+  mutate(abs_diff = abs(diff)) %>% 
+  top_n(20, abs_diff) %>% 
+  ggplot(.) + 
+  geom_vline(xintercept = 0, linetype='dashed') + 
+  geom_dumbbell(aes(x=0,
+                    xend=diff,
+                    y=reorder(District, diff),
+                    color=Region), size_x = 2, size_xend = 5, size=2) + 
+  ggtitle('Top 20 districts with largest difference in population projections in 2040',
+          subtitle = 'Adjusted Current Path minus Original Current Path scenario') + 
+  usaid.theme  + 
+  labs(y='',
+       x='Total Population Difference (millions)\nAdjusted Current Path minus Original Current Path',
+       caption='Source: IFs v7.33 IP4') + 
+  theme(plot.title = element_text(size=18))
+```
